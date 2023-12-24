@@ -1,4 +1,4 @@
-name: Workflow To Deploy To Testing Server (EC2)
+name: Testing Server 
 
 # run name for the workflow
 run-name: ${{github.actor}} initiated the workflow - Deploy To Testing
