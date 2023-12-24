@@ -1,0 +1,104 @@
+name: Workflow To Deploy To Testing Server (EC2)
+
+# run name for the workflow
+run-name: ${{github.actor}} initiated the workflow - Deploy To Testing
+
+# when to trigger the workflow
+on:
+  pull_request:
+    branches:
+      - master
+
+# what to do once the workflow is triggered
+jobs:
+  deploy:
+    # enviroment for the runners
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checking Out
+        uses: actions/checkout@v4
+        
+        # setting up NodeJS on the runner
+      - name: Setting Up Node JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+        
+      - name: Testing Node Installation
+        run:  |
+          node --version
+      
+      # installing any dependencies
+      - name: Install dependencies
+        run:  |
+          cd App
+          npm install
+
+      # building the project (checking for build errors)
+      - name: Building Project
+        run: |
+          cd App
+          npm run build-react
+
+      # running unit tests on the application
+      - name: Testing The Project
+        run: |
+          cd App
+          npm run test-react
+
+      # performing linting in the applcation
+      - name: Linting In The Project
+        run: |
+          cd App
+          npx eslint src/sum.js src/cartview.js src/shippingOptions.js
+
+      # Deploy All Changes To The Testing Server
+      - name: Deploy To Changes To Testing Server
+        uses: burnett01/rsync-deployments@6.0.0
+        with:
+          switches: -avzr --delete
+          path: ./*
+          remote_path: ~/
+          remote_host: 184.73.108.150
+          remote_user: ubuntu
+          remote_key: ${{ secrets.SSH_KEY }}
+
+      # Install Any New Dependencies
+      - name: Installing Node Modules
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 184.73.108.150
+          username: ubuntu
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: |
+            cd App
+            npm install
+
+      # notifying the QA and the Developer on workflow sucess.
+      - name: Notify on success
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          connection_url: ${{secrets.MAIL_CONNECTION}}
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          subject: Github Action Sucess
+          to: siratch4@gmail.com
+          from: siratch4@gmail.com
+          body: Workflow of ${{github.repository}} initiated by ${{github.actor}} was sucessfully executed. View the changes on the testing server!
+
+      # notifying the QA and the Developer on workflow sucess.
+      - name: Notify on Failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          connection_url: ${{secrets.MAIL_CONNECTION}}
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          subject: Github Action Failure
+          to: siratch4@gmail.com
+          from: siratch4@gmail.com
+          body: Workflow of ${{github.repository}} initiated by ${{github.actor}} failed, kindly check the workflow logs!
