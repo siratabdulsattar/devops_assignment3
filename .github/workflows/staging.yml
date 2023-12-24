@@ -1,5 +1,5 @@
 # name of the workflow
-name: Workflow To Deploy To Staging Server (EC2)
+name: Staging Server 
 
 # run name for the workflow
 run-name: ${{github.actor}} initiated the workflow - Deploy To Staging
